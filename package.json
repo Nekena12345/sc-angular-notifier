@@ -1,7 +1,7 @@
 {
   "name": "sc-angular-notifier",
   "description": "A well designed, fully animated, highly customizable, and easy-to-use notification library for your Angular application.",
-  "version": "14.0.2",
+  "version": "14.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
