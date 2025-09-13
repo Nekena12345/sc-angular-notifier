@@ -49,7 +49,12 @@ export class NotifierNotificationComponent implements AfterViewInit {
    */
   @Output()
   public dismiss: EventEmitter<string>;
-
+@Output()
+  customAction: EventEmitter<{
+    notificationId: string;
+    actionName: string;
+    actionPayload: any;
+  }>;
   /**
    * Notifier configuration
    */
@@ -109,6 +114,11 @@ export class NotifierNotificationComponent implements AfterViewInit {
     this.config = notifierService.getConfig();
     this.ready = new EventEmitter<NotifierNotificationComponent>();
     this.dismiss = new EventEmitter<string>();
+    this.customAction = new EventEmitter<{
+      notificationId: string;
+      actionName: string;
+      actionPayload: any;
+    }>();
     this.timerService = notifierTimerService;
     this.animationService = notifierAnimationService;
     this.renderer = renderer;
@@ -307,7 +317,12 @@ export class NotifierNotificationComponent implements AfterViewInit {
       this.onClickDismiss();
     }
   }
-
+  /**
+   * Handle custom action
+   */
+  public onCustomAction(name: string, payload: any): void {
+    this.customAction.emit({ notificationId: this.notification.id, actionName: name, actionPayload: payload });
+  }
   /**
    * Start the auto hide timer (if enabled)
    */

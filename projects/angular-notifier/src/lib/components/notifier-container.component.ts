@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, OnDestroy, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { NotifierAction } from '../models/notifier-action.model';
@@ -34,6 +34,11 @@ export class NotifierContainerComponent implements OnDestroy {
    * List of currently somewhat active notifications
    */
   public notifications: Array<NotifierNotification>;
+  /**
+   * custom action event emmitter
+   */
+  @Output()
+  public customAction: EventEmitter<any>;
 
   /**
    * Change detector
@@ -72,7 +77,7 @@ export class NotifierContainerComponent implements OnDestroy {
     this.queueService = notifierQueueService;
     this.config = notifierService.getConfig();
     this.notifications = [];
-
+    this.customAction = new EventEmitter<any>();
     // Connects this component up to the action queue, then handle incoming actions
     this.queueServiceSubscription = this.queueService.actionStream.subscribe((action: NotifierAction) => {
       this.handleAction(action).then(() => {
@@ -125,6 +130,18 @@ export class NotifierContainerComponent implements OnDestroy {
   }
 
   /**
+   * Event handler, handles custom actions
+   *
+   * @param action
+   */
+  onNotificationCustomAction(action: { notificationId: string; actionName: string; actionPayload: any }) {
+    this.queueService.push({
+      payload: action,
+      type: 'CUSTOM_ACTION',
+    });
+  }
+
+  /**
    * Handle incoming actions by mapping action types to methods, and then running them
    *
    * @param   action Action object
@@ -142,8 +159,11 @@ export class NotifierContainerComponent implements OnDestroy {
         return this.handleHideOldestAction(action);
       case 'HIDE_NEWEST':
         return this.handleHideNewestAction(action);
+
       case 'HIDE_ALL':
         return this.handleHideAllAction();
+      case 'CUSTOM_ACTION':
+        return this.handleCustomAction(action);
       default:
         return new Promise<void>((resolve: () => void) => {
           resolve(); // Ignore unknown action types
@@ -251,7 +271,7 @@ export class NotifierContainerComponent implements OnDestroy {
         }
 
         Promise.all(stepPromises).then(() => {
-          if (numberOfNotifications > this.config.behaviour.stacking) {
+          if (this.config.behaviour.stacking !== false && numberOfNotifications > this.config.behaviour.stacking) {
             this.removeNotificationFromList(this.notifications[0]);
           }
           this.tempPromiseResolver();
@@ -404,7 +424,10 @@ export class NotifierContainerComponent implements OnDestroy {
       }
     });
   }
-
+  private handleCustomAction(action: NotifierAction): Promise<void> {
+    this.customAction.emit({ name: action.payload.actionName, payload: action.payload.actionPayload });
+    return this.handleHideAction({ type: 'HIDE', payload: action.payload.notificationId });
+  }
   /**
    * Shift multiple notifications at once
    *
